@@ -19,7 +19,13 @@ class ConfluenceAnalyzer:
     
     def detect_rsi_extreme(self, rsi):
         """Detecta RSI en zona de sobreventa/sobrecompra"""
+        if len(rsi) == 0 or rsi.isna().all():
+            return None, 0
+        
         last_rsi = rsi.iloc[-1]
+        if pd.isna(last_rsi):
+            return None, 0
+        
         if last_rsi < RSI_OVERSOLD:
             return 'oversold', 1
         elif last_rsi > RSI_OVERBOUGHT:
@@ -28,7 +34,10 @@ class ConfluenceAnalyzer:
     
     def detect_support_resistance(self, df, lookback=20):
         """Detecta soportes y resistencias recientes"""
-        recent = df.tail(lookback)
+        if len(df) < lookback:
+            return None, 0
+        
+        recent = df.tail(lookback).copy()
         resistance = recent['high'].max()
         support = recent['low'].min()
         current = df['close'].iloc[-1]
@@ -46,6 +55,9 @@ class ConfluenceAnalyzer:
         """Calcula score de confluencia (0-5)"""
         score = 0
         signals = {}
+        
+        if len(df) < 50:
+            return 0, signals
         
         # RSI Extreme
         rsi = self.calculate_rsi(df)
@@ -67,9 +79,19 @@ class ConfluenceAnalyzer:
     
     def detect_volume_spike(self, df, lookback=20):
         """Detecta picos de volumen"""
-        avg_volume = df['volume'].tail(lookback).mean()
-        last_volume = df['volume'].iloc[-1]
+        if len(df) < lookback or 'volume' not in df.columns:
+            return None, 0
         
-        if last_volume > avg_volume * 1.5:
-            return 'volume_spike', 1
+        try:
+            avg_volume = df['volume'].tail(lookback).mean()
+            last_volume = df['volume'].iloc[-1]
+            
+            if pd.isna(avg_volume) or pd.isna(last_volume) or avg_volume == 0:
+                return None, 0
+            
+            if last_volume > avg_volume * 1.5:
+                return 'volume_spike', 1
+        except:
+            pass
+        
         return None, 0
