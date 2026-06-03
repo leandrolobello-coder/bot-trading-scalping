@@ -9,10 +9,13 @@ class OrderBlockDetector:
     
     def detect_ob(self, df):
         """Detecta Order Blocks recientes"""
-        recent = df.tail(self.lookback)
+        if len(df) < self.lookback:
+            return []
+        
+        recent = df.tail(self.lookback).copy()
         
         # Detecta cambios de dirección (potencial OB)
-        recent['direction_change'] = (recent['close'] > recent['open']).astype(int).diff()
+        recent.loc[:, 'direction_change'] = (recent['close'] > recent['open']).astype(int).diff()
         
         # Busca zonas donde hubo reversión (potencial OB)
         obs = []
